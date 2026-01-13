@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# FFmpeg binaries (using CDN instead)
+public/ffmpeg/
