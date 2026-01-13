@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { DashboardLayout } from './components/layout/DashboardLayout';
 import { Hub } from './components/hub/Hub';
-import { CommandBreadcrumb } from './components/layout/CommandBreadcrumb';
 import { CropPrompt, MixPrompt, SplitPrompt, CompressPrompt } from './components/operations';
 import { useFFmpeg } from './hooks/useFFmpeg';
 import { fetchFile } from '@ffmpeg/util';
