@@ -15,12 +15,24 @@ function App() {
   const [files, setFiles] = useState<VideoFile[]>([]);
   const [selectedFileId, setSelectedFileId] = useState<string | null>(null);
 
-  const { load, isLoaded, isLoading, message, writeFile, readFile, runCommand } = useFFmpeg();
+  const { load, isLoaded, isLoading, message, writeFile, readFile, runCommand, deleteFile } = useFFmpeg();
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
+  // Core Source Preference
+  const [useLocalCore, setUseLocalCore] = useState<boolean>(() => {
+    return localStorage.getItem('ffmpeg-source') === 'local';
+  });
+
   useEffect(() => {
-    load();
-  }, [load]);
+    load(useLocalCore);
+  }, [load, useLocalCore]);
+
+  const handleToggleSource = () => {
+    const newValue = !useLocalCore;
+    localStorage.setItem('ffmpeg-source', newValue ? 'local' : 'cdn');
+    // Reload to ensure clean WASM init
+    window.location.reload();
+  };
 
   const handleOperationSelect = (op: string) => {
     setActiveOperation(prev => prev === op ? null : op);
@@ -37,9 +49,9 @@ function App() {
 
     setFiles(prev => [...prev, ...newFiles]);
 
-    // Auto-select first file if none selected
-    if (!selectedFileId && newFiles.length > 0) {
-      setSelectedFileId(newFiles[0].id);
+    // Auto-select the newly added file (last one in the batch)
+    if (newFiles.length > 0) {
+      setSelectedFileId(newFiles[newFiles.length - 1].id);
     }
 
     if (isLoaded) {
@@ -88,6 +100,11 @@ function App() {
   // Get currently selected file object
   const selectedFile = files.find(f => f.id === selectedFileId);
 
+  // Reset preview URL when selected file changes
+  useEffect(() => {
+    setPreviewUrl(null);
+  }, [selectedFileId]);
+
   const handlePreview = async () => {
     if (!isLoaded) return;
 
@@ -110,13 +127,26 @@ function App() {
     // remove 'ffmpeg' if present
     if (args[0] === 'ffmpeg') args.shift();
 
+    // FILTER: Remove '-c copy' or '-c:v copy' to ensure we re-encode for preview (avoids broken keyframes)
+    // We filter out the flag and its value if they are separate args, or combined
+    const safeArgs = args.filter((arg, i) => {
+      const prev = args[i - 1];
+      if (arg === 'copy' && (prev === '-c' || prev === '-c:v')) return false;
+      if (arg === '-c' || arg === '-c:v') {
+        const next = args[i + 1];
+        if (next === 'copy') return false;
+      }
+      return true;
+    });
+
     // OPTIMIZATION: Inject '-t 3' (3 seconds) and ensure 'ultrafast' for speed
-    const outputFile = args.pop();
-    args.push('-t', '3', '-preset', 'ultrafast');
-    if (outputFile) args.push(outputFile);
+    // We re-add encoding params to force re-encode
+    const outputFile = safeArgs.pop();
+    safeArgs.push('-t', '3', '-c:v', 'libx264', '-preset', 'ultrafast');
+    if (outputFile) safeArgs.push(outputFile);
 
     try {
-      await runCommand(args);
+      await runCommand(safeArgs);
       const data = await readFile('preview.mp4');
       if (data) {
         const blob = new Blob([data as any], { type: 'video/mp4' }); // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -140,7 +170,18 @@ function App() {
       processCommand = command.replace('input.mp4', inputName);
     }
 
-    console.log('Running process command:', processCommand);
+    const uniqueOutputName = `output_${Date.now()}.mp4`;
+
+    // Replace standard 'output.mp4' with unique name to prevent stale file reads
+    // We use a global replace to be safe, though usually there's only one
+    processCommand = processCommand.replace(/output\.mp4/g, uniqueOutputName);
+
+    const targetFileName = (activeOperation !== 'mix' && selectedFile)
+      ? selectedFile.file.name
+      : "Multiple Files / Mix";
+
+    console.log(`[ANTIGRAVITY] Processing target: ${targetFileName}`);
+    console.log(`[ANTIGRAVITY] Command: ${processCommand}`);
 
     const args = processCommand.match(/(?:[^\s"]+|"[^"]*")+/g)?.map(arg => arg.replace(/^"|"$/g, '')) || [];
     if (args[0] === 'ffmpeg') args.shift();
@@ -148,8 +189,8 @@ function App() {
     try {
       await runCommand(args);
 
-      // Read the output file (assumed to be output.mp4 based on prompts)
-      const data = await readFile('output.mp4');
+      // Read the output file
+      const data = await readFile(uniqueOutputName);
       if (data) {
         const blob = new Blob([data as any], { type: 'video/mp4' }); // eslint-disable-line @typescript-eslint/no-explicit-any
         const url = URL.createObjectURL(blob);
@@ -164,6 +205,12 @@ function App() {
         URL.revokeObjectURL(url);
 
         console.log('Download started');
+
+        // Cleanup the unique file immediately
+        await deleteFile(uniqueOutputName);
+      } else {
+        console.error('No output file generated. Command likely failed.');
+        // If it failed, we don't download anything. Perfect.
       }
     } catch (e) {
       console.error('Processing failed:', e);
@@ -181,6 +228,9 @@ function App() {
       selectedFilename={selectedFile?.file.name}
       onCommandChange={setCommand}
       onRun={handleProcess}
+      useLocalCore={useLocalCore}
+      onToggleSource={handleToggleSource}
+      onFilesDrop={handleFilesDrop}
     >
       <Hub
         files={files}

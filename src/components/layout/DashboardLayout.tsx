@@ -13,6 +13,9 @@ interface DashboardLayoutProps {
     selectedFilename?: string;
     onCommandChange?: (cmd: string) => void;
     onRun?: () => void;
+    useLocalCore?: boolean;
+    onToggleSource?: () => void;
+    onFilesDrop?: (files: File[]) => void;
 }
 
 export function DashboardLayout({
@@ -25,10 +28,33 @@ export function DashboardLayout({
     statusMessage,
     selectedFilename,
     onCommandChange,
-    onRun
+    onRun,
+    useLocalCore,
+    onToggleSource,
+    onFilesDrop
 }: DashboardLayoutProps) {
+    const handleDragOver = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+    };
+
+    const handleDrop = (e: React.DragEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (onFilesDrop && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+            const droppedFiles = Array.from(e.dataTransfer.files).filter(file => file.type.startsWith('video/'));
+            if (droppedFiles.length > 0) {
+                onFilesDrop(droppedFiles);
+            }
+        }
+    };
+
     return (
-        <div className="flex flex-col h-screen w-full bg-neutral-950 text-white overflow-hidden font-sans selection:bg-purple-500/30">
+        <div
+            className="flex flex-col h-screen w-full bg-neutral-950 text-white overflow-hidden font-sans selection:bg-purple-500/30"
+            onDragOver={handleDragOver}
+            onDrop={handleDrop}
+        >
             {/* Ambient Background */}
             <div className="fixed inset-0 z-0 pointer-events-none">
                 <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] rounded-full bg-purple-900/20 blur-[120px]" />
@@ -46,6 +72,18 @@ export function DashboardLayout({
                         <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse shadow-[0_0_10px_#22c55e]" />
                         <span className="text-xs font-medium tracking-wider text-green-400">FFMPEG CORE ONLINE</span>
                     </div>
+
+                    {/* Source Toggle */}
+                    <button
+                        onClick={onToggleSource}
+                        className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full border border-white/5 bg-black/20 hover:bg-white/10 transition-colors cursor-pointer group"
+                        title="Click to switch FFmpeg Source (Reloads page)"
+                    >
+                        <div className={`w-1.5 h-1.5 rounded-full ${useLocalCore ? 'bg-blue-400' : 'bg-purple-400'}`} />
+                        <span className="text-[10px] uppercase font-mono tracking-wider text-neutral-400 group-hover:text-white">
+                            SRC: {useLocalCore ? 'LOCAL' : 'CDN'}
+                        </span>
+                    </button>
                 </div>
 
                 {/* Center Title / Status */}
