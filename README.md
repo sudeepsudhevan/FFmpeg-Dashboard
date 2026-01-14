@@ -1,4 +1,4 @@
-# FFmpeg Dashboard "Antigravity"
+# FFmpeg Dashboard
 
 A high-performance, aesthetically pleasing FFmpeg web dashboard built with React, Vite, and `ffmpeg.wasm`. This tool allows users to perform common video operations directly in the browser.
 

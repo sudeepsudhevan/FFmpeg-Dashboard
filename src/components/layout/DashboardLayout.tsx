@@ -89,7 +89,7 @@ export function DashboardLayout({
                 {/* Center Title / Status */}
                 <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2">
                     <div className="flex flex-col items-center">
-                        <h1 className="text-sm font-bold tracking-[0.2em] text-white/90">ANTIGRAVITY</h1>
+                        <h1 className="text-sm font-bold tracking-[0.2em] text-white/90">FFMPEG DASHBOARD</h1>
                         {selectedFilename && (
                             <span className="text-[10px] text-green-500 font-mono mt-0.5 max-w-[200px] truncate">
                                 {selectedFilename}

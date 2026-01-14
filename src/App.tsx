@@ -180,8 +180,8 @@ function App() {
       ? selectedFile.file.name
       : "Multiple Files / Mix";
 
-    console.log(`[ANTIGRAVITY] Processing target: ${targetFileName}`);
-    console.log(`[ANTIGRAVITY] Command: ${processCommand}`);
+    console.log(`[FFMPEG] Processing target: ${targetFileName}`);
+    console.log(`[FFMPEG] Command: ${processCommand}`);
 
     const args = processCommand.match(/(?:[^\s"]+|"[^"]*")+/g)?.map(arg => arg.replace(/^"|"$/g, '')) || [];
     if (args[0] === 'ffmpeg') args.shift();
