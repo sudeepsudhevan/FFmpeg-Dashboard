@@ -16,7 +16,7 @@ export function SplitPrompt({ isOpen, onClose, onUpdateCommand, onPreview, previ
 
     useEffect(() => {
         if (isOpen) {
-            const cmd = `ffmpeg -i input.mp4 -ss ${start} -to ${end} -c copy output.mp4`;
+            const cmd = `ffmpeg -i input.mp4 -ss ${start} -to ${end} -c:v libx264 -c:a aac output.mp4`;
             onUpdateCommand(cmd);
         }
     }, [start, end, isOpen, onUpdateCommand]);
